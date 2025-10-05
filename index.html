@@ -36,7 +36,7 @@
             min-height: 100vh;
             overflow-y: auto;
             
-            /* NOTE: Replace 'bridge-sea-seen-from-water.jpg' with a real file path or URL if you deploy this. */
+            /* Restore the background image. Ensure the image file is in the project's root directory. */
             background: url('bridge-sea-seen-from-water.jpg') no-repeat center center fixed;
             background-size: cover;
             background-color: #2a3d4f; /* Fallback color matching the image tone */
@@ -211,7 +211,7 @@
 
     <div class="container">
         <h1>Adverse Weather Oracle</h1>
-        <p class="subtitle">Probabilistic assessment of adverse weather events, derived from 20 years of NASA historical data (Simulated Data).</p>
+        <p class="subtitle">Probabilistic assessment of adverse weather events, derived from over 20 years of historical NASA satellite data.</p>
         
         <div class="input-group">
             <input type="text" id="location-input" class="input-field" placeholder="Enter a city or place..." required>
@@ -228,7 +228,7 @@
             <h3>Probability Forecast:</h3>
             <div class="results-grid">
                 <div class="metric-card">
-                    <span class="metric-label">High Temp > 35°C (%)</span>
+                    <span class="metric-label">High Temp > 32°C (%)</span>
                     <span id="prob-high-temp" class="metric-value">--</span>
                 </div>
                 <div class="metric-card">
