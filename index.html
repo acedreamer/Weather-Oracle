@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adverse Weather Oracle</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Updated font link to include Playfair Display for aesthetic heading -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js (Required for graphs) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Leaflet (for OpenStreetMap) CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Merged Styles -->
+    <style>
+        :root {
+            --card-bg-color: rgba(255, 255, 255, 0.1);
+            --text-color: #f0f0f0;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --input-bg-color: rgba(0, 0, 0, 0.2);
+            --accent-color: #88ddff;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Aligns content to the top */
+            min-height: 100vh;
+            overflow-y: auto;
+            
+            /* NOTE: Replace 'bridge-sea-seen-from-water.jpg' with a real file path or URL if you deploy this. */
+            background: url('bridge-sea-seen-from-water.jpg') no-repeat center center fixed;
+            background-size: cover;
+            background-color: #2a3d4f; /* Fallback color matching the image tone */
+            
+            padding: 30px 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px; 
+            padding: 2.5rem;
+            background: var(--card-bg-color);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(15px);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+        }
+        /* Style for the aesthetic heading */
+        .container h1 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700; 
+            font-size: 3.5rem; /* Increased size for prominence */
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Added subtle shadow for contrast */
+            font-style: italic; /* Added italic style */
+        }
+        .subtitle {
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            font-style: italic; /* Added italic style */
+        }
+        
+        .input-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 1rem; 
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 600px) {
+            .input-group {
+                flex-direction: row; 
+            }
+            .input-field {
+                flex: 1; 
+            }
+        }
+        
+        .input-field {
+            padding: 0.8rem 1rem;
+            background: var(--input-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 1rem;
+            /* Style fixes for number input arrows on some browsers */
+            -moz-appearance: textfield; /* Firefox */
+            appearance: textfield;
+        }
+        .input-field::-webkit-inner-spin-button, 
+        .input-field::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        /* START: Date Input Aesthetic Improvements */
+        input[type="date"] {
+            color: var(--text-color);
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1); 
+            cursor: pointer;
+            padding-right: 0.5rem; 
+        }
+        /* END: Date Input Aesthetic Improvements */
+
+        .submit-btn {
+            margin-top: 1rem;
+            background: var(--accent-color);
+            color: #121212;
+            padding: 0.9rem 1rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%; /* Make button full width */
+        }
+        .submit-btn:hover {
+            transform: scale(1.01); 
+            box-shadow: 0 0 15px rgba(136,221,255,0.7);
+        }
+        #map {
+            height: 200px; /* Define height for the map */
+            width: 100%;
+            border-radius: 10px;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        #coords-display {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            min-height: 1.2rem; /* Reserve space */
+        }
+        .results-container {
+            margin-top: 2rem;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .results-container.visible { opacity: 1; }
+        
+        /* Grid layout for results - forces horizontal display on wider screens */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (min-width: 480px) {
+            .results-grid {
+                grid-template-columns: repeat(4, 1fr); /* 4 horizontal boxes */
+            }
+        }
+        
+        .metric-card {
+            background: var(--input-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); 
+        }
+        .metric-label { font-size: 0.8rem; opacity: 0.8; text-align: center; }
+        .metric-value { font-size: 1.4rem; font-weight: 600; margin-top: 0.25rem; }
+
+        /* NEW CHART STYLES */
+        .chart-section {
+            display: flex;
+            flex-direction: column; /* Stack charts on small screens */
+            gap: 2rem;
+            margin-top: 3rem;
+            align-items: center;
+        }
+        .chart-container {
+            width: 100%;
+            max-width: 400px; /* Constrain chart size for aesthetics */
+            background: var(--input-bg-color);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+        @media (min-width: 700px) {
+            .chart-section {
+                flex-direction: row; /* Place charts side-by-side on wider screens */
+                justify-content: space-around;
+                gap: 1rem;
+            }
+            .chart-container {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Adverse Weather Oracle</h1>
+        <p class="subtitle">Probabilistic assessment of adverse weather events, derived from 20 years of NASA historical data (Simulated Data).</p>
+        
+        <div class="input-group">
+            <input type="text" id="location-input" class="input-field" placeholder="Enter a city or place..." required>
+            <input type="date" id="date-input" class="input-field" required>
+            <input type="number" id="time-hour-input" class="input-field" placeholder="Hour (0-23 UTC)" min="0" max="23" value="12" required>
+        </div>
+        
+        <div id="map"></div> 
+        <div id="coords-display">Click map to set precise location (Lat: --, Lon: --)</div> 
+        
+        <button id="submit-btn" class="submit-btn">Calculate Probabilities</button>
+        
+        <div id="results-div" class="results-container">
+            <h3>Probability Forecast:</h3>
+            <div class="results-grid">
+                <div class="metric-card">
+                    <span class="metric-label">High Temp > 35°C (%)</span>
+                    <span id="prob-high-temp" class="metric-value">--</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Heavy Rain (%)</span>
+                    <span id="prob-heavy-rain" class="metric-value">--</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Strong Wind (%)</span>
+                    <span id="prob-strong-wind" class="metric-value">--</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Any Adverse Event (%)</span>
+                    <span id="prob-any-adverse" class="metric-value">--</span>
+                </div>
+            </div>
+
+            <!-- NEW CHART SECTION -->
+            <div class="chart-section">
+                <!-- Bar Chart for specific events -->
+                <div class="chart-container">
+                    <canvas id="barChart"></canvas>
+                </div>
+                <!-- Doughnut Chart for overall risk -->
+                <div class="chart-container">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link to the external JavaScript file -->
+    <script src="config.js"></script> <!-- IMPORTANT: API keys -->
+    <script src="app.js"></script>
+</body>
+</html>
